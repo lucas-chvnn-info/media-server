@@ -1,0 +1,219 @@
+version: "3.8"
+
+services:
+  # ============================================
+  # 🎬 JELLYFIN - Media Server (like Netflix)
+  # ============================================
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Zurich}
+    volumes:
+      - ./config/jellyfin:/config
+      - ${ROOT_MEDIA_PATH:-/mnt/nvme/streaming-data}/media:/media:ro
+      - ${ROOT_MEDIA_PATH:-/mnt/nvme/streaming-data}/downloads:/downloads:ro
+
+  # ============================================
+  # 📥 QBITTORRENT - Torrent Client
+  # ============================================
+  qbittorrent:
+    image: linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Zurich}
+      - WEBUI_PORT=8085
+    volumes:
+      - ./config/qbittorrent:/config
+      - ${ROOT_MEDIA_PATH:-/mnt/nvme/streaming-data}/downloads:/downloads
+    ports:
+      - "6881:6881"
+      - "6881:6881/udp"
+      - "8085:8085"
+    networks:
+      - streaming
+
+  # ============================================
+  # 🔤 BAZARR - Automatic Subtitles
+  # ============================================
+  bazarr:
+    image: linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Zurich}
+    volumes:
+      - ./config/bazarr:/config
+      - ${ROOT_MEDIA_PATH:-/mnt/nvme/streaming-data}/media:/media
+      - ${ROOT_MEDIA_PATH:-/mnt/nvme/streaming-data}/downloads:/downloads
+    ports:
+      - "6767:6767"
+    networks:
+      - streaming
+    extra_hosts:
+      - "jellyfin:host-gateway"
+
+  # ============================================
+  # 🙋 JELLYSEERR - Request Manager (Overseerr fork)
+  # ============================================
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=${TZ:-Europe/Zurich}
+    ports:
+      - "5055:5055"
+    volumes:
+      - ./config/jellyseerr:/app/config
+    extra_hosts:
+      - "jellyfin:host-gateway"
+    restart: unless-stopped
+    networks:
+      - streaming
+
+  # ============================================
+  # 🔍 PROWLARR - Torrent Indexer Manager
+  # ============================================
+  prowlarr:
+    image: linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Zurich}
+    volumes:
+      - ./config/prowlarr:/config
+    ports:
+      - "9696:9696"
+    networks:
+      - streaming
+
+  # ============================================
+  # 🎬 RADARR - Movie Manager (Optional but nice)
+  # ============================================
+  radarr:
+    image: linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Zurich}
+    volumes:
+      - ./config/radarr:/config
+      - ${ROOT_MEDIA_PATH:-/mnt/nvme/streaming-data}/media/movies:/movies
+      - ${ROOT_MEDIA_PATH:-/mnt/nvme/streaming-data}/downloads:/downloads
+    ports:
+      - "7878:7878"
+    networks:
+      - streaming
+
+  # ============================================
+  # 📺 SONARR - TV Series Manager (Optional but nice)
+  # ============================================
+  sonarr:
+    image: linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Zurich}
+    volumes:
+      - ./config/sonarr:/config
+      - ${ROOT_MEDIA_PATH:-/mnt/nvme/streaming-data}/media/series:/tv
+      - ${ROOT_MEDIA_PATH:-/mnt/nvme/streaming-data}/downloads:/downloads
+    ports:
+      - "8989:8989"
+    networks:
+      - streaming
+
+  # ============================================
+  # 🛡️ FLARESOLVERR - Bypass Cloudflare (for some trackers)
+  # ============================================
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Zurich
+      - LOG_LEVEL=info
+    ports:
+      - "8191:8191"
+    networks:
+      - streaming
+
+
+  # ============================================
+  # 🌐 CLOUDFLARE TUNNEL - External Access
+  # ============================================
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: streaming-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    networks:
+      - streaming
+    extra_hosts:
+      - "jellyfin:host-gateway"
+    depends_on:
+      - jellyfin
+
+  # ============================================
+  # 📊 SYSTEM MONITORING - Glances
+  # ============================================
+  glances:
+    image: nicolargo/glances:latest
+    container_name: glances
+    restart: unless-stopped
+    pid: host
+    environment:
+      - GLANCES_OPT=-w
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - streaming
+
+  # ============================================
+  # 🏠 DASHBOARD - Streaming Hub (Next.js)
+  # ============================================
+  dashboard:
+    image: node:20-alpine
+    container_name: streaming-dashboard
+    working_dir: /app
+    volumes:
+      - ./dashboard-next:/app
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "8090:80"
+    command: sh -c "npm install && npm run build && npm run start -- -p 80"
+    restart: unless-stopped
+    networks:
+      - streaming
+    extra_hosts:
+      - "jellyfin:host-gateway"
+    depends_on:
+      - glances
+      - radarr
+      - sonarr
+      - jellyfin
+
+networks:
+  streaming:
+    driver: bridge

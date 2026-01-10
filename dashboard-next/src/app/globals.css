@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+  --jellyfin: #aa5cc3;
+  --radarr: #df9e24;
+  --sonarr: #007aff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: white;
+  font-family: "Space Grotesk", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/10 dark:bg-black/40 border border-white/20 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300;
+  }
+
+  .glass-button {
+    @apply flex items-center justify-center rounded-2xl bg-white/10 dark:bg-black/20 border border-white/20 backdrop-blur-md active:scale-95 transition-all text-zinc-700 dark:text-zinc-200 hover:bg-white/20 dark:hover:bg-white/10 cursor-pointer;
+  }
+
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  .text-shadow-lg {
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Scrollbar Hide but functional */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

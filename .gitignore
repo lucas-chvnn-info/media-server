@@ -1,0 +1,66 @@
+# System Files
+.DS_Store
+Thumbs.db
+._*
+
+# Sensitive Configuration & Data
+# Ignore the entire config folder which typically contains DBs, API keys, etc.
+config/
+*.env
+.env*
+!dashboard-next/.env.example
+dashboard/js/config.js
+*.pem
+*.key
+*.cert
+
+# Docker
+docker-compose.override.yml
+*.log
+*.pid
+
+# Node.js / JavaScript (Generic)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+coverage/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Application Specific
+# Backups often created by *arr apps
+Backups/
+backup/
+backups/
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.project
+.settings/
+.classpath
+
+# Media Files (Double-check protection)
+*.mkv
+*.mp4
+*.avi
+*.mov
+*.iso
+movies/
+series/
+tv/
+media/
+downloads/
