@@ -3,6 +3,12 @@ import { CONFIG } from './config';
 // Global variable to cache the result of the login (cookie) for qBittorrent
 let qbitCookie: string | null = null;
 
+// Jellyfin >= 10.11 rejects the legacy ?api_key= query param: send the key in the Authorization header
+const jellyfinHeaders = (): HeadersInit => {
+    const apiKey = CONFIG.API_KEYS.jellyfin;
+    return apiKey ? { Authorization: `MediaBrowser Token="${apiKey}"` } : {};
+};
+
 export const fetchRadarrData = async () => {
     const defaultData = {
         moviesCount: 0,
@@ -203,14 +209,9 @@ export const fetchSystemStats = async () => {
 
 export const fetchJellyfinSessions = async () => {
     try {
-        const apiKey = CONFIG.API_KEYS.jellyfin;
         const baseUrl = CONFIG.ENDPOINTS.jellyfin;
-        
-        // If no API key, try public sessions or just return basic status
-        let url = `${baseUrl}/Sessions`;
-        if (apiKey) url += `?api_key=${apiKey}`;
 
-        const res = await fetch(url).catch(() => null);
+        const res = await fetch(`${baseUrl}/Sessions`, { headers: jellyfinHeaders() }).catch(() => null);
         
         if (!res || !res.ok) return { activeStreams: [], count: 0 };
 
@@ -308,10 +309,10 @@ export const fetchQbitData = async () => {
                 const setCookie = loginRes.headers.get('set-cookie');
                 
                 if (setCookie) {
-                    // Simple extraction of SID
-                    const sidMatch = setCookie.match(/SID=([^;]+)/);
+                    // Simple extraction of SID (qBit >= 5 names it QBT_SID_<port>)
+                    const sidMatch = setCookie.match(/((?:QBT_)?SID(?:_\d+)?)=([^;]+)/);
                     if (sidMatch) {
-                        qbitCookie = `SID=${sidMatch[1]}`;
+                        qbitCookie = `${sidMatch[1]}=${sidMatch[2]}`;
                         // Retry request
                         res = await getData(qbitCookie).catch((e) => { console.error("Qbit retry fetch error", e); return null; });
                     }
@@ -447,14 +448,11 @@ export const fetchDetailedDisks = async () => {
 
 export const fetchJellyfinResume = async () => {
     try {
-        const apiKey = CONFIG.API_KEYS.jellyfin;
         const baseUrl = CONFIG.ENDPOINTS.jellyfin;
-        
+        const headers = jellyfinHeaders();
+
         // 1. Get Users to find "Primary" one (or just first one)
-        let userUrl = `${baseUrl}/Users`;
-        if (apiKey) userUrl += `?api_key=${apiKey}`;
-        
-        const usersRes = await fetch(userUrl).catch(() => null);
+        const usersRes = await fetch(`${baseUrl}/Users`, { headers }).catch(() => null);
         const users = usersRes && usersRes.ok ? await usersRes.json().catch(() => []) : [];
         
         if (users.length === 0) return [];
@@ -462,10 +460,9 @@ export const fetchJellyfinResume = async () => {
         const userId = users[0].Id; // Grab first user
 
         // 2. Get Resume Items
-        let resumeUrl = `${baseUrl}/Users/${userId}/Items/Resume?Limit=10&Recursive=true&Fields=PrimaryImageAspectRatio,CanDelete,BasicSyncInfo,MediaSourceCount`;
-        if (apiKey) resumeUrl += `&api_key=${apiKey}`;
+        const resumeUrl = `${baseUrl}/Users/${userId}/Items/Resume?Limit=10&Recursive=true&Fields=PrimaryImageAspectRatio,CanDelete,BasicSyncInfo,MediaSourceCount`;
 
-        const resumeRes = await fetch(resumeUrl).catch(() => null);
+        const resumeRes = await fetch(resumeUrl, { headers }).catch(() => null);
         const data = resumeRes && resumeRes.ok ? await resumeRes.json().catch(() => ({ Items: [] })) : { Items: [] };
 
         return (data.Items || []).map((item: any) => ({

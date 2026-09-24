@@ -155,7 +155,7 @@ def main():
     qbit_pass = ""
     try:
         logs = subprocess.check_output("docker logs qbittorrent 2>&1", shell=True).decode('utf-8')
-        match = re.search(r'The temporary password for the web UI is: (\S+)', logs)
+        match = re.search(r'temporary password (?:for the web UI is|is provided for this session): (\S+)', logs)
         if match:
             qbit_pass = match.group(1)
             print_success(f"Mot de passe temporaire: [bold cyan]{qbit_pass}[/bold cyan]")
