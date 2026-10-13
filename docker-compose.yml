@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # ============================================
   # 🎬 JELLYFIN - Media Server (like Netflix)
@@ -63,10 +61,11 @@ services:
       - "jellyfin:host-gateway"
 
   # ============================================
-  # 🙋 JELLYSEERR - Request Manager (Overseerr fork)
+  # 🙋 JELLYSEERR - Request Manager (now Seerr, the merged Jellyseerr/Overseerr)
   # ============================================
   jellyseerr:
-    image: fallenbagel/jellyseerr:latest
+    image: ghcr.io/seerr-team/seerr:latest
+    init: true
     container_name: jellyseerr
     environment:
       - LOG_LEVEL=debug
@@ -191,7 +190,7 @@ services:
   # 🏠 DASHBOARD - Streaming Hub (Next.js)
   # ============================================
   dashboard:
-    image: node:20-alpine
+    image: node:24-alpine
     container_name: streaming-dashboard
     working_dir: /app
     volumes:
