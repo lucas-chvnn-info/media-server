@@ -15,6 +15,9 @@ services:
     # Fournisseur VPN et clés : voir vpn.env.example
     env_file:
       - vpn.env
+    volumes:
+      # Certificats OpenVPN (client.crt, client.key) pour CyberGhost
+      - ./config/gluetun:/gluetun
     environment:
       - TZ=${TZ:-Europe/Zurich}
       # Si le port forwarding est activé dans vpn.env, gluetun reporte

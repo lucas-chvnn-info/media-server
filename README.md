@@ -48,8 +48,8 @@ Le conteneur `tunnel` maintient une connexion avec Cloudflare. Si vous voulez ac
 
 qBittorrent, Prowlarr et FlareSolverr n'ont pas de réseau à eux : ils utilisent celui du conteneur `gluetun`. Tout leur trafic (téléchargements, recherches sur les indexeurs) sort par le VPN, et si le VPN tombe, plus rien ne sort (kill switch). Jellyfin, Seerr, Radarr et Sonarr restent sur la connexion normale.
 
-1. `cp vpn.env.example vpn.env` et remplir (fournisseur, clé WireGuard).
-2. qBittorrent → Options → Web UI → cocher « Contourner l'authentification pour les clients sur localhost » : gluetun s'en sert pour reporter le port ouvert par le VPN.
+1. `cp vpn.env.example vpn.env` et suivre les étapes indiquées dedans (CyberGhost : identifiants OpenVPN + `client.crt` et `client.key` dans `config/gluetun/`).
+2. Seulement avec un VPN qui ouvre un port (ProtonVPN) : qBittorrent → Options → Web UI → cocher « Contourner l'authentification pour les clients sur localhost », pour que gluetun reporte ce port dans qBittorrent.
 3. Vérifier l'IP de sortie : `docker exec gluetun wget -qO- https://ipinfo.io` doit afficher l'IP du VPN, pas celle de la box.
 
 Les autres conteneurs joignent toujours `qbittorrent:8085` et `prowlarr:9696` (alias réseau de gluetun). Le réseau `streaming` a un sous-réseau fixe (172.30.0.0/24) pour que Prowlarr, derrière le VPN, retrouve Radarr et Sonarr : après la mise à jour, faire un `docker compose down` avant le `up`.
