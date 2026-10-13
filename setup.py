@@ -115,7 +115,12 @@ def main():
 
     # 3. Start Stack
     print_step("Démarrage de la stack")
-    
+
+    # Les téléchargements passent par le VPN (gluetun) : pas de VPN, pas de démarrage
+    if not os.path.exists(os.path.join(ROOT_DIR, "vpn.env")):
+        print_error("vpn.env manquant : copiez vpn.env.example en vpn.env et remplissez-le")
+        sys.exit(1)
+
     # Using a Group for cleaner layout or just simple Progress
     # Let's keep it simple but with better indentation
     with Progress(

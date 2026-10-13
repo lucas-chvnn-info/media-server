@@ -1,5 +1,46 @@
 services:
   # ============================================
+  # 🔒 GLUETUN - VPN (kill switch)
+  # qBittorrent, Prowlarr et FlareSolverr partagent son réseau :
+  # tout leur trafic sort par le VPN, et rien ne sort si le VPN tombe.
+  # ============================================
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    # Fournisseur VPN et clés : voir vpn.env.example
+    env_file:
+      - vpn.env
+    environment:
+      - TZ=${TZ:-Europe/Zurich}
+      # Si le port forwarding est activé dans vpn.env, gluetun reporte
+      # automatiquement le port ouvert dans qBittorrent (meilleur seed).
+      - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'wget -O- --retry-connrefused --post-data "json={\"listen_port\":{{PORTS}}}" http://127.0.0.1:8085/api/v2/app/setPreferences 2>&1'
+      # Autorise les conteneurs derrière le VPN à joindre Radarr/Sonarr et le LAN
+      - FIREWALL_OUTBOUND_SUBNETS=172.30.0.0/24,${LAN_SUBNET:-192.168.1.0/24}
+    ports:
+      - "8085:8085"   # qBittorrent
+      - "9696:9696"   # Prowlarr
+      - "8191:8191"   # FlareSolverr
+    extra_hosts:
+      # Le DNS de gluetun ne connaît pas les noms Docker : on les fixe ici
+      - "radarr:172.30.0.10"
+      - "sonarr:172.30.0.11"
+      - "flaresolverr:127.0.0.1"
+    networks:
+      streaming:
+        ipv4_address: 172.30.0.2
+        # Les autres conteneurs continuent d'utiliser ces noms
+        aliases:
+          - qbittorrent
+          - prowlarr
+          - flaresolverr
+
+  # ============================================
   # 🎬 JELLYFIN - Media Server (like Netflix)
   # ============================================
   jellyfin:
@@ -31,12 +72,10 @@ services:
     volumes:
       - ./config/qbittorrent:/config
       - ${ROOT_MEDIA_PATH:-/mnt/nvme/streaming-data}/downloads:/downloads
-    ports:
-      - "6881:6881"
-      - "6881:6881/udp"
-      - "8085:8085"
-    networks:
-      - streaming
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
 
   # ============================================
   # 🔤 BAZARR - Automatic Subtitles
@@ -93,10 +132,10 @@ services:
       - TZ=${TZ:-Europe/Zurich}
     volumes:
       - ./config/prowlarr:/config
-    ports:
-      - "9696:9696"
-    networks:
-      - streaming
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
 
   # ============================================
   # 🎬 RADARR - Movie Manager (Optional but nice)
@@ -116,7 +155,8 @@ services:
     ports:
       - "7878:7878"
     networks:
-      - streaming
+      streaming:
+        ipv4_address: 172.30.0.10
 
   # ============================================
   # 📺 SONARR - TV Series Manager (Optional but nice)
@@ -136,7 +176,8 @@ services:
     ports:
       - "8989:8989"
     networks:
-      - streaming
+      streaming:
+        ipv4_address: 172.30.0.11
 
   # ============================================
   # 🛡️ FLARESOLVERR - Bypass Cloudflare (for some trackers)
@@ -148,10 +189,10 @@ services:
     environment:
       - TZ=Europe/Zurich
       - LOG_LEVEL=info
-    ports:
-      - "8191:8191"
-    networks:
-      - streaming
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
 
 
   # ============================================
@@ -216,3 +257,6 @@ services:
 networks:
   streaming:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
