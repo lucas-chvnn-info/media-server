@@ -8,6 +8,7 @@ import {
 import { ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { serviceLinks } from '@/lib/links';
 import { Card } from './components/Card';
 import { Clock as ClockComponent } from './components/Clock'; // Renamed to avoid conflict with lucide-react Clock
 
@@ -21,6 +22,11 @@ export default function DashboardPage() {
 
     const [isDark, setIsDark] = useState(true);
     const [activeView, setActiveView] = useState<'none' | 'calendar' | 'recents' | 'storage'>('none');
+    const [links, setLinks] = useState(() => serviceLinks());
+
+    useEffect(() => {
+        setLinks(serviceLinks(window.location.hostname));
+    }, []);
 
     useEffect(() => {
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
@@ -222,7 +228,7 @@ export default function DashboardPage() {
                     <div className="xl:w-2/4 flex flex-col">
                         <Card 
                             className="w-full h-full min-h-[360px] !bg-[#aa5cc3]/5 !border-[#aa5cc3]/20 relative overflow-hidden group !p-0 rounded-3xl"
-                            href="https://streaming.florian-anthony.ch"
+                            href={links.jellyfin}
                             color="#aa5cc3"
                             isDark={isDark}
                             fanart={data?.jellyfin?.activeStreams?.[0]?.item?.backdrop} 
@@ -311,7 +317,7 @@ export default function DashboardPage() {
                                 stats={data?.radarr?.stats}
                                 color="#df9e24"
                                 fanart={data?.radarr?.fanart}
-                                href="https://radarr.florian-anthony.ch"
+                                href={links.radarr}
                                 icon={<Film className="w-5 h-5 md:w-6 md:h-6" />}
                                 isDark={isDark}
                                 actionLabel="Agenda"
@@ -328,7 +334,7 @@ export default function DashboardPage() {
                                 stats={data?.sonarr?.stats}
                                 color="#007AFF"
                                 fanart={data?.sonarr?.fanart}
-                                href="https://sonarr.florian-anthony.ch"
+                                href={links.sonarr}
                                 icon={<Tv className="w-5 h-5 md:w-6 md:h-6" />}
                                 isDark={isDark}
                                 actionLabel="Agenda"
@@ -346,7 +352,7 @@ export default function DashboardPage() {
                             label="Jellyseerr" 
                             icon={<Search className="w-6 h-6"/>} 
                             color="#E5A00D" 
-                            href="https://jellyseerr.florian-anthony.ch" 
+                            href={links.seerr} 
                             isDark={isDark} 
                         />
                         {/* Smaller Tools */}
@@ -355,11 +361,11 @@ export default function DashboardPage() {
                             label={data?.qbit?.status === 'online' ? `↓ ${formatBytes(data.qbit.data.down)} · ↑ ${formatBytes(data.qbit.data.up)}` : "Downloads"} 
                             icon={<Download />} 
                             color="#2f69a5" 
-                            href="https://qbit.florian-anthony.ch" 
+                            href={links.qbittorrent} 
                             isDark={isDark} 
                         />
-                        <ToolButton title="Prowlarr" label="Index" icon={<Network />} color="#e63d33" href="https://prowlarr.florian-anthony.ch" isDark={isDark} />
-                        <ToolButton className="md:col-span-2 xl:col-span-1" title="Bazarr" label="Subtitles" icon={<Languages />} color="#5856D6" href="https://bazarr.florian-anthony.ch" isDark={isDark} />
+                        <ToolButton title="Prowlarr" label="Index" icon={<Network />} color="#e63d33" href={links.prowlarr} isDark={isDark} />
+                        <ToolButton className="md:col-span-2 xl:col-span-1" title="Bazarr" label="Subtitles" icon={<Languages />} color="#5856D6" href={links.bazarr} isDark={isDark} />
                     </div>
 
                 </div>
