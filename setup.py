@@ -32,6 +32,7 @@ from rich.align import Align
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_FILE = os.path.join(ROOT_DIR, ".env")
 DASHBOARD_ENV_FILE = os.path.join(ROOT_DIR, "dashboard-next", ".env")
+COMPOSE = "docker compose"
 CONFIG_DIR = os.path.join(ROOT_DIR, "config")
 
 console = Console()
@@ -78,7 +79,13 @@ def main():
     if not check_command("docker --version"):
         print_error("Docker n'est pas installé.")
         sys.exit(1)
-    if not check_command("docker-compose --version"):
+    # Docker récent (Linux) : plugin « docker compose » ; ancien : « docker-compose »
+    global COMPOSE
+    if check_command("docker compose version"):
+        COMPOSE = "docker compose"
+    elif check_command("docker-compose --version"):
+        COMPOSE = "docker-compose"
+    else:
         print_error("Docker Compose n'est pas installé.")
         sys.exit(1)
     print_success("Docker & Docker Compose détectés")
@@ -130,7 +137,7 @@ def main():
     ) as progress:
         task = progress.add_task(description="  Lancement des conteneurs...", total=None)
         try:
-            subprocess.check_call("docker-compose up -d", shell=True, cwd=ROOT_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.check_call(f"{COMPOSE} up -d", shell=True, cwd=ROOT_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             progress.update(task, completed=True, description="  [green]Conteneurs lancés[/green]")
         except:
             progress.stop()
@@ -241,7 +248,7 @@ QBIT_PASSWORD={current_config['QBIT_PASSWORD']}
     # 7. Restart Dashboard to apply changes
     print_step("Redémarrage du Dashboard")
     try:
-        subprocess.check_call("docker-compose up -d --force-recreate dashboard", shell=True, cwd=ROOT_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.check_call(f"{COMPOSE} up -d --force-recreate dashboard", shell=True, cwd=ROOT_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print_success("Dashboard redémarré avec la nouvelle config")
     except:
         print_error("Echec du redémarrage du dashboard")
